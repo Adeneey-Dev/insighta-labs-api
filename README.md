@@ -1,98 +1,71 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Insighta Labs Intelligence Query API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS + PostgreSQL REST API for querying demographic profile data with advanced filtering, sorting, pagination, and natural language search.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
+- NestJS (Node.js framework)
+- PostgreSQL with TypeORM
+- UUID v4 for primary keys
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Setup
 
 ```bash
-$ npm install
+npm install
+cp .env.example .env
+# Fill in your DB credentials in .env
+npm run start:dev
 ```
 
-## Compile and run the project
+## Endpoints
 
-```bash
-# development
-$ npm run start
+### GET /api/profiles
+Query profiles with filters, sorting, and pagination.
 
-# watch mode
-$ npm run start:dev
+**Filters:** `gender`, `age_group`, `country_id`, `min_age`, `max_age`, `min_gender_probability`, `min_country_probability`  
+**Sorting:** `sort_by` (age | created_at | gender_probability), `order` (asc | desc)  
+**Pagination:** `page` (default: 1), `limit` (default: 10, max: 50)
 
-# production mode
-$ npm run start:prod
-```
+### GET /api/profiles/search?q=...
+Natural language query endpoint.
 
-## Run tests
+## Natural Language Parsing Approach
 
-```bash
-# unit tests
-$ npm run test
+The parser uses rule-based keyword matching via regex patterns. No AI or LLM is used.
 
-# e2e tests
-$ npm run test:e2e
+### Supported keywords and their mappings
 
-# test coverage
-$ npm run test:cov
-```
+| Keyword / Phrase | Filter Applied |
+|---|---|
+| `males`, `male` | gender = male |
+| `females`, `female`, `women`, `girls` | gender = female |
+| `male and female`, `both` | no gender filter |
+| `children`, `kids` | age_group = child |
+| `teenagers`, `teens` | age_group = teenager |
+| `adults` | age_group = adult |
+| `seniors`, `elderly` | age_group = senior |
+| `young` (not "young adult") | min_age = 16, max_age = 24 |
+| `above 30`, `over 30`, `older than 30` | min_age = 30 |
+| `below 18`, `under 18`, `younger than 18` | max_age = 18 |
+| `between 20 and 40` | min_age = 20, max_age = 40 |
+| `aged 25` | min_age = 25, max_age = 25 |
+| `from nigeria`, `in kenya` | country_id = NG / KE |
 
-## Deployment
+Countries are matched from a hardcoded map of ~30 common African and global countries.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### How the logic works
+1. The query string is lowercased and trimmed
+2. Gender patterns are checked first (regex)
+3. Age group keywords are checked
+4. Explicit age range patterns (above/below/between) override group keywords for min/max
+5. Country phrases (`from X`, `in X`) are matched; fallback scans for any known country name
+6. If no filter is extracted, an error is returned
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Limitations
+- Does not understand synonyms not in the keyword list (e.g. "boys" is not mapped)
+- Country names not in the hardcoded map will not be recognized
+- Cannot handle compound queries like "Nigerians who are adults but not seniors"
+- Does not support ISO country code input (e.g. "from NG" won't work)
+- Does not handle negation (e.g. "not from Nigeria")
+- "young adult" is treated as `adult`, not `young`
+- Age ranges derived from age group keywords are not mixed with explicit `above/below` constraints — explicit constraints take priority
+- Multiple countries in a single query resolves to the first match found
