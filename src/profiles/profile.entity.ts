@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryColumn, CreateDateColumn, BeforeInsert, } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  CreateDateColumn,
+  BeforeInsert,
+} from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
 @Entity('profiles')
@@ -33,12 +39,10 @@ export class Profile {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-
-@BeforeInsert()
+  @BeforeInsert()
   generateId() {
     if (!this.id) {
       this.id = uuidv4();
     }
   }
-
 }

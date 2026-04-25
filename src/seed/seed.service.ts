@@ -2,7 +2,7 @@ import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Profile } from '../profiles/profile.entity';
-import { v4 as uuidv4 } from 'uuid';
+import { v7 as uuidv7 } from 'uuid';
 import * as data from './seed-data.json';
 
 @Injectable()
@@ -14,8 +14,8 @@ export class SeedService implements OnApplicationBootstrap {
     private repo: Repository<Profile>,
   ) {}
 
-  async onApplicationBootstrap() {
-    await this.seed();
+  onApplicationBootstrap() {
+    this.seed().catch((err) => this.logger.error('Seed failed', err));
   }
 
   async seed() {
@@ -24,23 +24,30 @@ export class SeedService implements OnApplicationBootstrap {
     let skipped = 0;
 
     for (const r of records) {
-      const exists = await this.repo.findOne({ where: { name: r.name } });
-      if (exists) { skipped++; continue; }
+      try {
+        const exists = await this.repo.findOne({ where: { name: r.name } });
+        if (exists) {
+          skipped++;
+          continue;
+        }
 
-      await this.repo.save(
-        this.repo.create({
-          id: uuidv4(),
-          name: r.name,
-          gender: r.gender,
-          gender_probability: r.gender_probability,
-          age: r.age,
-          age_group: r.age_group,
-          country_id: r.country_id,
-          country_name: r.country_name,
-          country_probability: r.country_probability,
-        }),
-      );
-      inserted++;
+        await this.repo.save(
+          this.repo.create({
+            id: uuidv7(),
+            name: r.name,
+            gender: r.gender,
+            gender_probability: r.gender_probability,
+            age: r.age,
+            age_group: r.age_group,
+            country_id: r.country_id,
+            country_name: r.country_name,
+            country_probability: r.country_probability,
+          }),
+        );
+        inserted++;
+      } catch (e) {
+        skipped++;
+      }
     }
 
     this.logger.log(`Seed done — inserted: ${inserted}, skipped: ${skipped}`);
