@@ -18,6 +18,7 @@
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true,
     "types": ["jest"],
-    "ignoreDeprecations": "5.0"
+    "ignoreDeprecations": "5.0",
+    "esModuleInterop": true
   }
 }

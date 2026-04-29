@@ -36,10 +36,17 @@ import { ApiVersionMiddleware } from './common/middleware/api-version.middleware
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes('*');
+    consumer
+      .apply(LoggerMiddleware)
+      .forRoutes({ path: '*path', method: RequestMethod.ALL });
 
     consumer
       .apply(ApiVersionMiddleware)
-      .forRoutes({ path: 'profiles*', method: RequestMethod.ALL });
+      .forRoutes(
+        { path: 'profiles', method: RequestMethod.ALL },
+        { path: 'profiles/:id', method: RequestMethod.ALL },
+        { path: 'profiles/search', method: RequestMethod.ALL },
+        { path: 'profiles/export', method: RequestMethod.ALL },
+      );
   }
 }
