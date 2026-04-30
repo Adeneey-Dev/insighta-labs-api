@@ -24,45 +24,56 @@ export class AuthController {
   @Get('github/callback')
   @UseGuards(AuthGuard('github'))
   async githubCallback(@Req() req: Request, @Res() res: Response) {
-    const user = req.user as any;
-    const tokens = await this.authService.generateTokens(user.id, user.role);
+    try {
+      const user = req.user as any;
+      const tokens = await this.authService.generateTokens(user.id, user.role);
 
-    const isCli =
-      req.query.cli === 'true' || req.query.state?.toString().includes('cli');
+      // Check if this is a CLI request
+      // CLI sends cli=true in the original request
+      // GitHub passes state back so we check both
 
-    if (isCli) {
-      // Redirect back to CLI local server with tokens
-      const tokenData = encodeURIComponent(
-        JSON.stringify({
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          user: {
-            username: user.username,
-            email: user.email,
-            role: user.role,
-            avatar_url: user.avatar_url,
-          },
-        }),
-      );
-      return res.redirect(`http://localhost:9876/callback?tokens=${tokenData}`);
+      const isCli = String(req.query.state || '').startsWith('cli_');
+
+      if (isCli) {
+        const tokenData = encodeURIComponent(
+          JSON.stringify({
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            user: {
+              username: user.username,
+              email: user.email,
+              role: user.role,
+              avatar_url: user.avatar_url,
+            },
+          }),
+        );
+        return res.redirect(
+          `http://localhost:9876/callback?tokens=${tokenData}`,
+        );
+      }
+
+      // Web browser flow
+      res.cookie('access_token', tokens.access_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 3 * 60 * 1000,
+      });
+      res.cookie('refresh_token', tokens.refresh_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 5 * 60 * 1000,
+      });
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      return res.redirect(`${frontendUrl}/dashboard`);
+    } catch (e) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Authentication failed',
+      });
     }
-
-    // Web browser flow — set HTTP-only cookies
-    res.cookie('access_token', tokens.access_token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 3 * 60 * 1000,
-    });
-    res.cookie('refresh_token', tokens.refresh_token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 5 * 60 * 1000,
-    });
-
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
-    return res.redirect(`${frontendUrl}/dashboard`);
   }
 
   @Post('refresh')

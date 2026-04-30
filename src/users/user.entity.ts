@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   BeforeInsert,
 } from 'typeorm';
-import { v7 as uuidv7 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 
 @Entity('users')
 export class User {
@@ -42,7 +42,7 @@ export class User {
   @BeforeInsert()
   generateId() {
     if (!this.id) {
-      this.id = uuidv7();
+      this.id = uuidv4();
     }
   }
 }
