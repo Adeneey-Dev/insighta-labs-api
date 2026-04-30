@@ -27,35 +27,42 @@ export class AuthController {
     const user = req.user as any;
     const tokens = await this.authService.generateTokens(user.id, user.role);
 
-    const isWeb = req.query.state !== 'cli';
+    const isCli =
+      req.query.cli === 'true' || req.query.state?.toString().includes('cli');
 
-    if (isWeb) {
-      res.cookie('access_token', tokens.access_token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        maxAge: 3 * 60 * 1000,
-      });
-      res.cookie('refresh_token', tokens.refresh_token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        maxAge: 5 * 60 * 1000,
-      });
-      return res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
+    if (isCli) {
+      // Redirect back to CLI local server with tokens
+      const tokenData = encodeURIComponent(
+        JSON.stringify({
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          user: {
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            avatar_url: user.avatar_url,
+          },
+        }),
+      );
+      return res.redirect(`http://localhost:9876/callback?tokens=${tokenData}`);
     }
 
-    // CLI flow — return tokens as JSON
-    return res.json({
-      status: 'success',
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      user: {
-        username: user.username,
-        email: user.email,
-        role: user.role,
-      },
+    // Web browser flow — set HTTP-only cookies
+    res.cookie('access_token', tokens.access_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 3 * 60 * 1000,
     });
+    res.cookie('refresh_token', tokens.refresh_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 5 * 60 * 1000,
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    return res.redirect(`${frontendUrl}/dashboard`);
   }
 
   @Post('refresh')
