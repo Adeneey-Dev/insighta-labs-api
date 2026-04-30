@@ -6,7 +6,6 @@ import {
   Res,
   Body,
   UseGuards,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
@@ -28,13 +27,12 @@ export class AuthController {
       const user = req.user as any;
       const tokens = await this.authService.generateTokens(user.id, user.role);
 
-      // Check if this is a CLI request
-      // CLI sends cli=true in the original request
-      // GitHub passes state back so we check both
-
-      const isCli = String(req.query.state || '').startsWith('cli_');
+      // Read the state from query params
+      const state = String(req.query.state || '');
+      const isCli = state.startsWith('cli_');
 
       if (isCli) {
+        // Redirect back to CLI local server
         const tokenData = encodeURIComponent(
           JSON.stringify({
             access_token: tokens.access_token,
@@ -68,10 +66,11 @@ export class AuthController {
 
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
       return res.redirect(`${frontendUrl}/dashboard`);
-    } catch (e) {
+    } catch (e: any) {
+      console.error('Auth callback error:', e.message);
       return res.status(500).json({
         status: 'error',
-        message: 'Authentication failed',
+        message: 'Authentication failed: ' + e.message,
       });
     }
   }
@@ -87,9 +86,10 @@ export class AuthController {
       const tokens = await this.authService.refreshTokens(body.refresh_token);
       return res.json({ status: 'success', ...tokens });
     } catch {
-      return res
-        .status(401)
-        .json({ status: 'error', message: 'Invalid or expired refresh token' });
+      return res.status(401).json({
+        status: 'error',
+        message: 'Invalid or expired refresh token',
+      });
     }
   }
 
@@ -100,7 +100,10 @@ export class AuthController {
     await this.authService.logout(user.id);
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
-    return res.json({ status: 'success', message: 'Logged out successfully' });
+    return res.json({
+      status: 'success',
+      message: 'Logged out successfully',
+    });
   }
 
   @Get('me')
@@ -117,5 +120,14 @@ export class AuthController {
         role: user.role,
       },
     };
+  }
+
+  @Get('debug-callback')
+  async debugCallback(@Req() req: Request, @Res() res: Response) {
+    return res.json({
+      query: req.query,
+      state: req.query.state,
+      isCli: String(req.query.state || '').startsWith('cli_'),
+    });
   }
 }
