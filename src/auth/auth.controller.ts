@@ -42,26 +42,24 @@ export class AuthController {
       console.log('isCli:', isCli);
       console.log('User:', user.username);
 
-      if (isCli) {
-        // Redirect back to CLI local server on port 9876
-        const tokenPayload = {
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          user: {
-            username: user.username,
-            email: user.email,
-            role: user.role,
-            avatar_url: user.avatar_url,
-          },
-        };
-        const tokenData = encodeURIComponent(
-          JSON.stringify(tokenPayload),
-        );
-        const cliRedirect = `http://localhost:9876/callback?tokens=${tokenData}`;
-        console.log('Redirecting to CLI:', cliRedirect.substring(0, 60));
-        return res.redirect(cliRedirect);
-      }
+    
+  if (!isCli) {
+     const frontendUrl =
+    process.env.FRONTEND_URL ||
+    'https://insighta-labs-web-portal-adeneey-devs-projects.vercel.app';
 
+  // Pass tokens in URL so web portal can store them
+     const tokenData = encodeURIComponent(
+    JSON.stringify({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+    }),
+  );
+
+  return res.redirect(
+    `${frontendUrl}/dashboard?tokens=${tokenData}`,
+  );
+}
       // Web browser flow
       const isProd =
         process.env.NODE_ENV === 'production' ||
