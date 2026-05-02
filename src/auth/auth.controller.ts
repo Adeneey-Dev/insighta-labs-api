@@ -25,49 +25,71 @@ export class AuthController {
   async githubCallback(@Req() req: Request, @Res() res: Response) {
     try {
       const user = req.user as any;
-      const tokens = await this.authService.generateTokens(user.id, user.role);
+      const tokens = await this.authService.generateTokens(
+        user.id,
+        user.role,
+      );
 
-      // Read the state from query params
-      const state = String(req.query.state || '');
+      // Read state from both the user object and query params
+      const state =
+        user.oauthState ||
+        String(req.query.state || '');
+
       const isCli = state.startsWith('cli_');
 
+      console.log('=== CALLBACK ===');
+      console.log('State:', state);
+      console.log('isCli:', isCli);
+      console.log('User:', user.username);
+
       if (isCli) {
-        // Redirect back to CLI local server
+        // Redirect back to CLI local server on port 9876
+        const tokenPayload = {
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          user: {
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            avatar_url: user.avatar_url,
+          },
+        };
         const tokenData = encodeURIComponent(
-          JSON.stringify({
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token,
-            user: {
-              username: user.username,
-              email: user.email,
-              role: user.role,
-              avatar_url: user.avatar_url,
-            },
-          }),
+          JSON.stringify(tokenPayload),
         );
-        return res.redirect(
-          `http://localhost:9876/callback?tokens=${tokenData}`,
-        );
+        const cliRedirect = `http://localhost:9876/callback?tokens=${tokenData}`;
+        console.log('Redirecting to CLI:', cliRedirect.substring(0, 60));
+        return res.redirect(cliRedirect);
       }
 
       // Web browser flow
+      const isProd =
+        process.env.NODE_ENV === 'production' ||
+        process.env.FRONTEND_URL?.startsWith('https');
+
       res.cookie('access_token', tokens.access_token, {
         httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        maxAge: 3 * 60 * 1000,
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+        maxAge: 10 * 60 * 1000,
+        path: '/',
       });
       res.cookie('refresh_token', tokens.refresh_token, {
         httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        maxAge: 5 * 60 * 1000,
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+        maxAge: 10 * 60 * 1000,
+        path: '/',
       });
 
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      const frontendUrl =
+        process.env.FRONTEND_URL ||
+        'https://insighta-labs-web-portal-adeneey-devs-projects.vercel.app';
+
+      console.log('Redirecting to web:', frontendUrl + '/dashboard');
       return res.redirect(`${frontendUrl}/dashboard`);
     } catch (e: any) {
-      console.error('Auth callback error:', e.message);
+      console.error('Callback error:', e.message);
       return res.status(500).json({
         status: 'error',
         message: 'Authentication failed: ' + e.message,
@@ -76,14 +98,20 @@ export class AuthController {
   }
 
   @Post('refresh')
-  async refresh(@Body() body: { refresh_token: string }, @Res() res: Response) {
+  async refresh(
+    @Body() body: { refresh_token: string },
+    @Res() res: Response,
+  ) {
     if (!body.refresh_token) {
-      return res
-        .status(400)
-        .json({ status: 'error', message: 'Refresh token required' });
+      return res.status(400).json({
+        status: 'error',
+        message: 'Refresh token required',
+      });
     }
     try {
-      const tokens = await this.authService.refreshTokens(body.refresh_token);
+      const tokens = await this.authService.refreshTokens(
+        body.refresh_token,
+      );
       return res.json({ status: 'success', ...tokens });
     } catch {
       return res.status(401).json({
@@ -98,8 +126,8 @@ export class AuthController {
   async logout(@Req() req: Request, @Res() res: Response) {
     const user = req.user as any;
     await this.authService.logout(user.id);
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    res.clearCookie('access_token', { path: '/' });
+    res.clearCookie('refresh_token', { path: '/' });
     return res.json({
       status: 'success',
       message: 'Logged out successfully',
@@ -120,14 +148,5 @@ export class AuthController {
         role: user.role,
       },
     };
-  }
-
-  @Get('debug-callback')
-  async debugCallback(@Req() req: Request, @Res() res: Response) {
-    return res.json({
-      query: req.query,
-      state: req.query.state,
-      isCli: String(req.query.state || '').startsWith('cli_'),
-    });
   }
 }

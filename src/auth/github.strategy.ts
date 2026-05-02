@@ -11,7 +11,6 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
       callbackURL: process.env.GITHUB_CALLBACK_URL,
       scope: ['user:email'],
-      state: false,
       passReqToCallback: true,
     });
   }
@@ -21,13 +20,20 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     accessToken: string,
     refreshToken: string,
     profile: any,
+    done: any,
   ) {
-    const user = await this.authService.validateGithubUser({
-      github_id: String(profile.id),
-      username: profile.username,
-      email: profile.emails?.[0]?.value || '',
-      avatar_url: profile.photos?.[0]?.value || '',
-    });
-    return user;
+    try {
+      const user = await this.authService.validateGithubUser({
+        github_id: String(profile.id),
+        username: profile.username,
+        email: profile.emails?.[0]?.value || '',
+        avatar_url: profile.photos?.[0]?.value || '',
+      });
+      // Attach state to user object so controller can read it
+      (user as any).oauthState = req.query.state || '';
+      done(null, user);
+    } catch (err) {
+      done(err, null);
+    }
   }
 }

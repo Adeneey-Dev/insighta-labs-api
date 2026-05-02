@@ -8,9 +8,24 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
+  const frontendUrl =
+    process.env.FRONTEND_URL ||
+    'https://insighta-labs-web-portal-adeneey-devs-projects.vercel.app';
+
   app.enableCors({
-    origin: [process.env.FRONTEND_URL || '*', 'http://localhost:3001'],
+    origin: [
+      frontendUrl,
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-API-Version',
+      'Cookie',
+    ],
   });
 
   app.setGlobalPrefix('api');
@@ -18,5 +33,6 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
   console.log(`Server running on port ${port}`);
+  console.log(`Frontend URL: ${frontendUrl}`);
 }
 bootstrap();
