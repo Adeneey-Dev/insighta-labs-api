@@ -29,8 +29,6 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
         email: profile.emails?.[0]?.value || '',
         avatar_url: profile.photos?.[0]?.value || '',
       });
-      // Attach state to user object so controller can read it
-      (user as any).oauthState = req.query.state || '';
       done(null, user);
     } catch (err) {
       done(err, null);
