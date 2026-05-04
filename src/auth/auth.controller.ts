@@ -100,6 +100,7 @@ export class AuthController {
         client_secret: process.env.GITHUB_CLIENT_SECRET || '',
         code: body.code,
         redirect_uri: 'http://localhost:9876/callback',
+        code_verifier: body.code_verifier,
       });
 
       const tokenResponse = await axios.post(
