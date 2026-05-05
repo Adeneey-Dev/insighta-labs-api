@@ -58,20 +58,25 @@ export class AuthController {
       }
 
       // Web portal — set HTTP-only cookies
-      const frontendUrl =
-        process.env.FRONTEND_URL ||
-        'https://insighta-labs-web-portal-adeneey-devs-projects.vercel.app';
+const frontendUrl = process.env.FRONTEND_URL ||
+  'https://insighta-labs-web-portal-adeneey-devs-projects.vercel.app';
 
-      const tokenData = encodeURIComponent(
-        JSON.stringify({
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-        }),
-      );
+res.cookie('access_token', tokens.access_token, {
+  httpOnly: true,
+  secure: true,        // Vercel uses HTTPS, so secure=true
+  sameSite: 'lax',
+  maxAge: 3 * 60 * 1000,   // 3 minutes
+});
+res.cookie('refresh_token', tokens.refresh_token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax',
+  maxAge: 5 * 60 * 1000,   // 5 minutes
+});
 
-      return res.redirect(
-        `${frontendUrl}/dashboard?tokens=${tokenData}`,
-      );
+// Redirect to frontend dashboard (no tokens in URL)
+return res.redirect(`${frontendUrl}/dashboard`);
+
     } catch (e: any) {
       console.error('Callback error:', e.message);
       return res.status(500).json({
