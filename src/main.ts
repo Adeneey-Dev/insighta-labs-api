@@ -38,8 +38,8 @@ async function bootstrap() {
       const token = req.csrfToken();
       res.cookie('XSRF-TOKEN', token, {
         httpOnly: false,   // must be readable by frontend JavaScript
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        secure: true,
+        sameSite: 'none',
       });
     }
     next();

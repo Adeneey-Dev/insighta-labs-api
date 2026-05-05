@@ -64,7 +64,7 @@ const frontendUrl = process.env.FRONTEND_URL ||
 res.cookie('access_token', tokens.access_token, {
   httpOnly: true,
   secure: true,        // Vercel uses HTTPS, so secure=true
-  sameSite: 'lax',
+  sameSite: 'none',
   maxAge: 3 * 60 * 1000,   // 3 minutes
 });
 res.cookie('refresh_token', tokens.refresh_token, {
