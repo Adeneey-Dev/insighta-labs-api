@@ -70,7 +70,7 @@ res.cookie('access_token', tokens.access_token, {
 res.cookie('refresh_token', tokens.refresh_token, {
   httpOnly: true,
   secure: true,
-  sameSite: 'lax',
+  sameSite: 'none',
   maxAge: 5 * 60 * 1000,   // 5 minutes
 });
 

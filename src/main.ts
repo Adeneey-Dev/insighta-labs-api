@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import * as csurf from 'csurf';
+import csurf from 'csurf';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
