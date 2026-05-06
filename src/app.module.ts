@@ -12,6 +12,7 @@ import { User } from './users/user.entity';
 import { ProfilesModule } from './profiles/profiles.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { CacheModule } from './cache/cache.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { ApiVersionMiddleware } from './common/middleware/api-version.middleware';
 
@@ -22,6 +23,8 @@ import { ApiVersionMiddleware } from './common/middleware/api-version.middleware
       type: 'postgres',
       url: process.env.DATABASE_URL,
       entities: [Profile, User],
+      // synchronize: true will automatically create/update the indexes
+      // defined on the Profile entity using TypeORM's @Index decorators
       synchronize: true,
       ssl: { rejectUnauthorized: false },
     }),
@@ -29,6 +32,9 @@ import { ApiVersionMiddleware } from './common/middleware/api-version.middleware
       { name: 'auth', ttl: 60000, limit: 10 },
       { name: 'default', ttl: 60000, limit: 60 },
     ]),
+    // CacheModule is @Global() so CacheService is available everywhere
+    // without needing to import CacheModule in each feature module
+    CacheModule,
     AuthModule,
     UsersModule,
     ProfilesModule,
@@ -47,6 +53,7 @@ export class AppModule implements NestModule {
         { path: 'profiles/:id', method: RequestMethod.ALL },
         { path: 'profiles/search', method: RequestMethod.ALL },
         { path: 'profiles/export', method: RequestMethod.ALL },
+        { path: 'profiles/import', method: RequestMethod.ALL },
       );
   }
 }

@@ -29,10 +29,7 @@ export class AuthController {
   async githubCallback(@Req() req: Request, @Res() res: Response) {
     try {
       const user = req.user as any;
-      const tokens = await this.authService.generateTokens(
-        user.id,
-        user.role,
-      );
+      const tokens = await this.authService.generateTokens(user.id, user.role);
 
       // Check if CLI request via state
       const state = String(req.query.state || '');
@@ -58,25 +55,25 @@ export class AuthController {
       }
 
       // Web portal — set HTTP-only cookies
-const frontendUrl = process.env.FRONTEND_URL ||
-  'https://insighta-labs-web-portal-adeneey-devs-projects.vercel.app';
+      const frontendUrl =
+        process.env.FRONTEND_URL ||
+        'https://insighta-labs-web-portal-adeneey-devs-projects.vercel.app';
 
-res.cookie('access_token', tokens.access_token, {
-  httpOnly: true,
-  secure: true,        // Vercel uses HTTPS, so secure=true
-  sameSite: 'none',
-  maxAge: 3 * 60 * 1000,   // 3 minutes
-});
-res.cookie('refresh_token', tokens.refresh_token, {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'none',
-  maxAge: 5 * 60 * 1000,   // 5 minutes
-});
+      res.cookie('access_token', tokens.access_token, {
+        httpOnly: true,
+        secure: true, // Vercel uses HTTPS, so secure=true
+        sameSite: 'none',
+        maxAge: 3 * 60 * 1000, // 3 minutes
+      });
+      res.cookie('refresh_token', tokens.refresh_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        maxAge: 5 * 60 * 1000, // 5 minutes
+      });
 
-// Redirect to frontend dashboard (no tokens in URL)
-return res.redirect(`${frontendUrl}/dashboard`);
-
+      // Redirect to frontend dashboard (no tokens in URL)
+      return res.redirect(`${frontendUrl}/dashboard`);
     } catch (e: any) {
       console.error('Callback error:', e.message);
       return res.status(500).json({
@@ -129,15 +126,12 @@ return res.redirect(`${frontendUrl}/dashboard`);
       }
 
       // Get user info from GitHub
-      const userResponse = await axios.get(
-        'https://api.github.com/user',
-        {
-          headers: {
-            Authorization: `Bearer ${githubAccessToken}`,
-            Accept: 'application/json',
-          },
+      const userResponse = await axios.get('https://api.github.com/user', {
+        headers: {
+          Authorization: `Bearer ${githubAccessToken}`,
+          Accept: 'application/json',
         },
-      );
+      });
 
       const emailResponse = await axios.get(
         'https://api.github.com/user/emails',
@@ -152,9 +146,7 @@ return res.redirect(`${frontendUrl}/dashboard`);
       const githubUser = userResponse.data;
       const emails = emailResponse.data;
       const primaryEmail =
-        emails.find((e: any) => e.primary)?.email ||
-        emails[0]?.email ||
-        '';
+        emails.find((e: any) => e.primary)?.email || emails[0]?.email || '';
 
       // Create or update user
       const user = await this.authService.validateGithubUser({
@@ -165,10 +157,7 @@ return res.redirect(`${frontendUrl}/dashboard`);
       });
 
       // Generate our tokens
-      const tokens = await this.authService.generateTokens(
-        user.id,
-        user.role,
-      );
+      const tokens = await this.authService.generateTokens(user.id, user.role);
 
       return res.json({
         status: 'success',
@@ -191,10 +180,7 @@ return res.redirect(`${frontendUrl}/dashboard`);
   }
 
   @Post('refresh')
-  async refresh(
-    @Body() body: { refresh_token: string },
-    @Res() res: Response,
-  ) {
+  async refresh(@Body() body: { refresh_token: string }, @Res() res: Response) {
     if (!body.refresh_token) {
       return res.status(400).json({
         status: 'error',
@@ -202,9 +188,7 @@ return res.redirect(`${frontendUrl}/dashboard`);
       });
     }
     try {
-      const tokens = await this.authService.refreshTokens(
-        body.refresh_token,
-      );
+      const tokens = await this.authService.refreshTokens(body.refresh_token);
       return res.json({ status: 'success', ...tokens });
     } catch {
       return res.status(401).json({

@@ -9,7 +9,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Secret for signed cookies (required for csurf with cookie: true)
-  const COOKIE_SECRET = process.env.COOKIE_SECRET || 'default-super-secret-change-me';
+  const COOKIE_SECRET =
+    process.env.COOKIE_SECRET || 'default-super-secret-change-me';
   app.use(cookieParser(COOKIE_SECRET));
 
   const frontendUrl =
@@ -37,7 +38,7 @@ async function bootstrap() {
     if (req.csrfToken) {
       const token = req.csrfToken();
       res.cookie('XSRF-TOKEN', token, {
-        httpOnly: false,   // must be readable by frontend JavaScript
+        httpOnly: false, // must be readable by frontend JavaScript
         secure: true,
         sameSite: 'none',
       });
